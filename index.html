@@ -1,19 +1,801 @@
-<!doctype html>
-<html>
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<title>My static Space</title>
-		<link rel="stylesheet" href="style.css" />
-	</head>
-	<body>
-		<div class="card">
-			<h1>Welcome to your static Space!</h1>
-			<p>You can modify this app directly by editing <i>index.html</i> in the Files and versions tab.</p>
-			<p>
-				Also don't forget to check the
-				<a href="https://huggingface.co/docs/hub/spaces" target="_blank">Spaces documentation</a>.
-			</p>
-		</div>
-	</body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConstructFlow | Construction Project Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Custom CSS for the 3D viewer and other elements */
+        #bim-viewer {
+            width: 100%;
+            height: 500px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .viewer-controls {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 10;
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .phase-indicator {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background-color: rgba(255,255,255,0.9);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .co2-gauge {
+            width: 120px;
+            height: 120px;
+            position: relative;
+        }
+        
+        .gauge-body {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                #4ade80 0% 25%,
+                #facc15 25% 75%,
+                #f87171 75% 100%
+            );
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .gauge-inner {
+            width: 80%;
+            height: 80%;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .task-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .file-item:hover {
+            background-color: #f8fafc;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-left: 2rem;
+        }
+        
+        .timeline-item:before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            height: 100%;
+            width: 2px;
+            background-color: #e2e8f0;
+        }
+        
+        .timeline-dot {
+            position: absolute;
+            left: 0;
+            top: 0.25rem;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            background-color: #3b82f6;
+            border: 2px solid white;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            #bim-viewer {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 flex items-center">
+                        <i class="fas fa-building text-blue-600 text-2xl mr-2"></i>
+                        <span class="text-xl font-bold text-gray-900">ConstructFlow</span>
+                    </div>
+                    <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                        <a href="#" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Dashboard</a>
+                        <a href="#" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Projects</a>
+                        <a href="#" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Team</a>
+                        <a href="#" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Reports</a>
+                    </div>
+                </div>
+                <div class="hidden sm:ml-6 sm:flex sm:items-center">
+                    <div class="ml-3 relative">
+                        <div class="flex items-center space-x-4">
+                            <div class="relative">
+                                <button class="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <i class="fas fa-bell text-xl"></i>
+                                    <span class="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
+                                </button>
+                            </div>
+                            <div class="relative">
+                                <button class="p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <i class="fas fa-comment-dots text-xl"></i>
+                                    <span class="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500"></span>
+                                </button>
+                            </div>
+                            <div class="flex items-center">
+                                <img class="h-8 w-8 rounded-full" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                                <span class="ml-2 text-sm font-medium">John Doe</span>
+                                <i class="fas fa-chevron-down ml-1 text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="-mr-2 flex items-center sm:hidden">
+                    <button type="button" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500" aria-controls="mobile-menu" aria-expanded="false">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- Project Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Riverfront Tower Project</h1>
+                <p class="text-gray-500">123 Main St, Portland, OR • Project ID: RF-2023-001</p>
+            </div>
+            <div class="mt-4 md:mt-0 flex space-x-3">
+                <button class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-share-alt mr-2"></i> Share
+                </button>
+                <button class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-plus mr-2"></i> New Task
+                </button>
+            </div>
+        </div>
+        
+        <!-- Project Status -->
+        <div class="bg-white shadow rounded-lg p-4 mb-6">
+            <div class="flex flex-wrap items-center justify-between">
+                <div class="flex items-center space-x-4 mb-4 md:mb-0">
+                    <div>
+                        <span class="text-sm font-medium text-gray-500">Status</span>
+                        <div class="flex items-center mt-1">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                            <span class="ml-2 text-sm text-gray-500">Phase 2 of 5</span>
+                        </div>
+                    </div>
+                    <div>
+                        <span class="text-sm font-medium text-gray-500">Timeline</span>
+                        <div class="flex items-center mt-1">
+                            <span class="text-sm font-medium text-gray-900">45 days remaining</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-center">
+                        <span class="text-sm font-medium text-gray-500">Budget</span>
+                        <div class="mt-1">
+                            <span class="text-sm font-medium text-gray-900">$2.4M / $3.2M</span>
+                            <div class="w-32 h-2 bg-gray-200 rounded-full mt-1">
+                                <div class="h-2 bg-blue-600 rounded-full" style="width: 75%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <span class="text-sm font-medium text-gray-500">CO₂ Saved</span>
+                        <div class="mt-1">
+                            <span class="text-sm font-medium text-gray-900">124 tons</span>
+                            <div class="w-32 h-2 bg-gray-200 rounded-full mt-1">
+                                <div class="h-2 bg-green-500 rounded-full" style="width: 62%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Dashboard Grid -->
+        <div class="dashboard-grid grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column (3D Viewer) -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- 3D BIM/IFC Viewer -->
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="text-lg font-medium text-gray-900">3D Model Viewer</h2>
+                        <div class="flex space-x-2">
+                            <button class="p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-layer-group"></i>
+                            </button>
+                            <button class="p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-ruler-combined"></i>
+                            </button>
+                            <button class="p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-comment"></i>
+                            </button>
+                            <button class="p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="bim-viewer">
+                        <!-- Placeholder for 3D viewer - would be replaced with actual viewer like xeokit, Forge, etc. -->
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="text-center">
+                                <i class="fas fa-cube text-6xl text-gray-300 mb-4"></i>
+                                <p class="text-gray-500 font-medium">3D Model Viewer</p>
+                                <p class="text-gray-400 text-sm mt-1">IFC/BIM model would be displayed here</p>
+                            </div>
+                        </div>
+                        <div class="viewer-controls">
+                            <button class="bg-white p-2 rounded-full shadow-md hover:bg-gray-100">
+                                <i class="fas fa-arrows-alt text-gray-700"></i>
+                            </button>
+                            <button class="bg-white p-2 rounded-full shadow-md hover:bg-gray-100">
+                                <i class="fas fa-search-plus text-gray-700"></i>
+                            </button>
+                            <button class="bg-white p-2 rounded-full shadow-md hover:bg-gray-100">
+                                <i class="fas fa-search-minus text-gray-700"></i>
+                            </button>
+                            <button class="bg-white p-2 rounded-full shadow-md hover:bg-gray-100">
+                                <i class="fas fa-home text-gray-700"></i>
+                            </button>
+                        </div>
+                        <div class="phase-indicator">
+                            <i class="fas fa-hard-hat text-blue-500 mr-1"></i>
+                            <span>Structural Framing Phase</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Task Manager -->
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="text-lg font-medium text-gray-900">Tasks</h2>
+                        <div class="flex space-x-2">
+                            <button class="p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                            <button class="p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                                <i class="fas fa-sort"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="divide-y divide-gray-200">
+                        <!-- Task Item -->
+                        <div class="task-item p-4 hover:bg-gray-50 transition-all duration-150 cursor-pointer">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 pt-0.5">
+                                    <div class="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <input type="checkbox" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                    </div>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-sm font-medium text-gray-900">Install steel beams - Level 3</p>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">High</span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1">Structural steel needs to be installed before concrete pouring can begin.</p>
+                                    <div class="mt-2 flex items-center text-xs text-gray-500">
+                                        <span class="flex items-center mr-3">
+                                            <i class="fas fa-calendar-alt mr-1"></i>
+                                            Due tomorrow
+                                        </span>
+                                        <span class="flex items-center mr-3">
+                                            <i class="fas fa-user-hard-hat mr-1"></i>
+                                            Steel Crew
+                                        </span>
+                                        <span class="flex items-center">
+                                            <i class="fas fa-comments mr-1"></i>
+                                            3 comments
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Task Item -->
+                        <div class="task-item p-4 hover:bg-gray-50 transition-all duration-150 cursor-pointer">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 pt-0.5">
+                                    <div class="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <input type="checkbox" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500">
+                                    </div>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-sm font-medium text-gray-900">Inspect concrete pour - Basement</p>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">Medium</span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1">Quality control inspection required before proceeding with next phase.</p>
+                                    <div class="mt-2 flex items-center text-xs text-gray-500">
+                                        <span class="flex items-center mr-3">
+                                            <i class="fas fa-calendar-alt mr-1"></i>
+                                            Due in 2 days
+                                        </span>
+                                        <span class="flex items-center mr-3">
+                                            <i class="fas fa-user-hard-hat mr-1"></i>
+                                            QC Team
+                                        </span>
+                                        <span class="flex items-center">
+                                            <i class="fas fa-paperclip mr-1"></i>
+                                            1 attachment
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Task Item -->
+                        <div class="task-item p-4 hover:bg-gray-50 transition-all duration-150 cursor-pointer">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0 pt-0.5">
+                                    <div class="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center">
+                                        <input type="checkbox" class="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" checked>
+                                    </div>
+                                </div>
+                                <div class="ml-3 flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-sm font-medium text-gray-900">Order window frames</p>
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">Completed</span>
+                                    </div>
+                                    <p class="text-sm text-gray-500 mt-1">Order placed with supplier, expected delivery in 3 weeks.</p>
+                                    <div class="mt-2 flex items-center text-xs text-gray-500">
+                                        <span class="flex items-center mr-3">
+                                            <i class="fas fa-calendar-check mr-1"></i>
+                                            Completed today
+                                        </span>
+                                        <span class="flex items-center mr-3">
+                                            <i class="fas fa-user-hard-hat mr-1"></i>
+                                            Procurement
+                                        </span>
+                                        <span class="flex items-center">
+                                            <i class="fas fa-file-invoice-dollar mr-1"></i>
+                                            PO #45678
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 text-right">
+                        <button class="text-sm font-medium text-blue-600 hover:text-blue-500">View all tasks (24)</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column -->
+            <div class="space-y-6">
+                <!-- CO₂ Tracker -->
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200">
+                        <h2 class="text-lg font-medium text-gray-900">CO₂ Emissions Tracker</h2>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex justify-center mb-4">
+                            <div class="co2-gauge">
+                                <div class="gauge-body">
+                                    <div class="gauge-inner">
+                                        <span class="text-2xl font-bold text-gray-800">1.2</span>
+                                        <span class="text-xs text-gray-500">tons/m²</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <div>
+                                <div class="flex justify-between text-sm font-medium mb-1">
+                                    <span class="text-gray-700">Current Phase</span>
+                                    <span class="text-blue-600">42 tons</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: 45%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm font-medium mb-1">
+                                    <span class="text-gray-700">Project Total</span>
+                                    <span class="text-green-600">124/200 tons</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full" style="width: 62%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm font-medium mb-1">
+                                    <span class="text-gray-700">Industry Benchmark</span>
+                                    <span class="text-gray-600">1.8 tons/m²</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-gray-400 h-2 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-gray-200">
+                            <h3 class="text-sm font-medium text-gray-900 mb-2">Breakdown by Material</h3>
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Concrete</span>
+                                    <span class="font-medium">68 tons (55%)</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Steel</span>
+                                    <span class="font-medium">32 tons (26%)</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Transport</span>
+                                    <span class="font-medium">12 tons (10%)</span>
+                                </div>
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-600">Other</span>
+                                    <span class="font-medium">12 tons (9%)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- File Manager -->
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+                        <h2 class="text-lg font-medium text-gray-900">Files & Documents</h2>
+                        <button class="p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                    <div class="divide-y divide-gray-200">
+                        <!-- File Item -->
+                        <div class="file-item p-3 hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 bg-blue-100 rounded-md p-2">
+                                    <i class="fas fa-file-pdf text-blue-600"></i>
+                                </div>
+                                <div class="ml-3 flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate">Structural_Design_v3.pdf</p>
+                                    <div class="flex items-center text-xs text-gray-500 mt-1">
+                                        <span class="truncate">2.4 MB</span>
+                                        <span class="mx-1">•</span>
+                                        <span class="truncate">Updated 2 days ago</span>
+                                    </div>
+                                </div>
+                                <div class="ml-2 flex-shrink-0 flex">
+                                    <button class="p-1 rounded text-gray-400 hover:text-gray-500 hover:bg-gray-100">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- File Item -->
+                        <div class="file-item p-3 hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 bg-green-100 rounded-md p-2">
+                                    <i class="fas fa-file-excel text-green-600"></i>
+                                </div>
+                                <div class="ml-3 flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate">Material_Schedule.xlsx</p>
+                                    <div class="flex items-center text-xs text-gray-500 mt-1">
+                                        <span class="truncate">1.7 MB</span>
+                                        <span class="mx-1">•</span>
+                                        <span class="truncate">Updated today</span>
+                                    </div>
+                                </div>
+                                <div class="ml-2 flex-shrink-0 flex">
+                                    <button class="p-1 rounded text-gray-400 hover:text-gray-500 hover:bg-gray-100">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- File Item -->
+                        <div class="file-item p-3 hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 bg-purple-100 rounded-md p-2">
+                                    <i class="fas fa-file-image text-purple-600"></i>
+                                </div>
+                                <div class="ml-3 flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate">Site_Progress_Photos.zip</p>
+                                    <div class="flex items-center text-xs text-gray-500 mt-1">
+                                        <span class="truncate">24.5 MB</span>
+                                        <span class="mx-1">•</span>
+                                        <span class="truncate">Updated 1 week ago</span>
+                                    </div>
+                                </div>
+                                <div class="ml-2 flex-shrink-0 flex">
+                                    <button class="p-1 rounded text-gray-400 hover:text-gray-500 hover:bg-gray-100">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- File Item -->
+                        <div class="file-item p-3 hover:bg-gray-50 transition-colors duration-150 cursor-pointer">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 bg-yellow-100 rounded-md p-2">
+                                    <i class="fas fa-file-word text-yellow-600"></i>
+                                </div>
+                                <div class="ml-3 flex-1 min-w-0">
+                                    <p class="text-sm font-medium text-gray-900 truncate">Contract_Amendment.docx</p>
+                                    <div class="flex items-center text-xs text-gray-500 mt-1">
+                                        <span class="truncate">0.8 MB</span>
+                                        <span class="mx-1">•</span>
+                                        <span class="truncate">Updated yesterday</span>
+                                    </div>
+                                </div>
+                                <div class="ml-2 flex-shrink-0 flex">
+                                    <button class="p-1 rounded text-gray-400 hover:text-gray-500 hover:bg-gray-100">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="px-4 py-3 bg-gray-50 text-center">
+                        <button class="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500">
+                            <i class="fas fa-cloud-upload-alt mr-2"></i>
+                            Upload New File
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Timeline -->
+                <div class="bg-white shadow rounded-lg overflow-hidden">
+                    <div class="px-4 py-3 border-b border-gray-200">
+                        <h2 class="text-lg font-medium text-gray-900">Project Timeline</h2>
+                    </div>
+                    <div class="p-4">
+                        <div class="space-y-4">
+                            <!-- Timeline Item -->
+                            <div class="timeline-item">
+                                <div class="timeline-dot"></div>
+                                <div class="pl-4">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm font-medium text-gray-900">Foundation Complete</span>
+                                        <span class="text-xs text-gray-500">May 15</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">All foundation work completed and inspected</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Timeline Item -->
+                            <div class="timeline-item">
+                                <div class="timeline-dot bg-green-500"></div>
+                                <div class="pl-4">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm font-medium text-gray-900">Structural Framing</span>
+                                        <span class="text-xs text-gray-500">May 16 - Jun 30</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Current phase - 65% complete</p>
+                                    <div class="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                                        <div class="bg-green-500 h-1.5 rounded-full" style="width: 65%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Timeline Item -->
+                            <div class="timeline-item">
+                                <div class="timeline-dot bg-gray-300"></div>
+                                <div class="pl-4">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm font-medium text-gray-900">Enclosure</span>
+                                        <span class="text-xs text-gray-500">Jul 1 - Aug 15</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Windows, roofing and exterior walls</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Timeline Item -->
+                            <div class="timeline-item">
+                                <div class="timeline-dot bg-gray-300"></div>
+                                <div class="pl-4">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm font-medium text-gray-900">MEP Rough-in</span>
+                                        <span class="text-xs text-gray-500">Aug 16 - Sep 30</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Mechanical, electrical and plumbing</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Timeline Item -->
+                            <div class="timeline-item">
+                                <div class="timeline-dot bg-gray-300"></div>
+                                <div class="pl-4">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm font-medium text-gray-900">Interior Finishes</span>
+                                        <span class="text-xs text-gray-500">Oct 1 - Nov 15</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-1">Drywall, flooring, painting, fixtures</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-gray-200 text-center">
+                            <button class="text-sm font-medium text-blue-600 hover:text-blue-500">View Full Timeline</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Team Collaboration Footer -->
+    <div class="bg-white border-t border-gray-200 fixed bottom-0 left-0 right-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-2">
+                <div class="flex items-center space-x-4">
+                    <div class="flex -space-x-2">
+                        <img class="h-8 w-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1491528323818-fdd1faba62cc?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                        <img class="h-8 w-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1550525811-e5869dd03032?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" alt="">
+                        <img class="h-8 w-8 rounded-full border-2 border-white" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2.25&w=256&h=256&q=80" alt="">
+                        <span class="h-8 w-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-500">+5</span>
+                    </div>
+                    <span class="text-sm text-gray-500">6 team members online</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="p-2 rounded-full text-gray-400 hover:text-gray-500 hover:bg-gray-100">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="p-2 rounded-full text-gray-400 hover:text-gray-500 hover:bg-gray-100">
+                        <i class="fas fa-phone"></i>
+                    </button>
+                    <div class="relative">
+                        <input type="text" class="w-64 rounded-full border-gray-300 pl-4 pr-10 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Message the team...">
+                        <button class="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-500">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // This would be replaced with actual BIM viewer initialization in a real implementation
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simulate loading the BIM viewer
+            setTimeout(() => {
+                const viewer = document.getElementById('bim-viewer');
+                viewer.innerHTML = `
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <div class="text-center">
+                            <i class="fas fa-cube text-6xl text-blue-500 mb-4 animate-pulse"></i>
+                            <p class="text-gray-700 font-medium">Loading 3D Model</p>
+                            <p class="text-gray-500 text-sm mt-1">Riverfront_Tower_L3.ifc</p>
+                            <div class="w-32 h-1 bg-gray-200 rounded-full mt-4 mx-auto">
+                                <div class="h-1 bg-blue-500 rounded-full animate-progress" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Simulate progress
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += 5;
+                    const progressBar = document.querySelector('.animate-progress');
+                    if (progressBar) progressBar.style.width = `${progress}%`;
+                    
+                    if (progress >= 100) {
+                        clearInterval(progressInterval);
+                        viewer.innerHTML = `
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="text-center">
+                                    <i class="fas fa-check-circle text-6xl text-green-500 mb-4"></i>
+                                    <p class="text-gray-700 font-medium">Model Loaded Successfully</p>
+                                    <p class="text-gray-500 text-sm mt-1">3D visualization ready</p>
+                                    <button class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                                        Explore Model
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="viewer-controls">
+                                <button class="bg-white p-2 rounded-full shadow-md hover:bg-gray-100">
+                                    <i class="fas fa-arrows-alt text-gray-700"></i>
+                                </button>
+                                <button class="bg-white p-2 rounded-full shadow-md hover:bg-gray-100">
+                                    <i class="fas fa-search-plus text-gray-700"></i>
+                                </button>
+                                <button class="bg-white p-2 rounded-full shadow-md hover:bg-gray-100">
+                                    <i class="fas fa-search-minus text-gray-700"></i>
+                                </button>
+                                <button class="bg-white p-2 rounded-full shadow-md hover:bg-gray-100">
+                                    <i class="fas fa-home text-gray-700"></i>
+                                </button>
+                            </div>
+                            <div class="phase-indicator">
+                                <i class="fas fa-hard-hat text-blue-500 mr-1"></i>
+                                <span>Structural Framing Phase</span>
+                            </div>
+                        `;
+                    }
+                }, 100);
+            }, 1000);
+            
+            // Task completion toggle
+            document.querySelectorAll('.task-item input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const taskItem = this.closest('.task-item');
+                    if (this.checked) {
+                        taskItem.classList.add('opacity-70');
+                    } else {
+                        taskItem.classList.remove('opacity-70');
+                    }
+                });
+            });
+            
+            // Simulate real-time collaboration
+            setInterval(() => {
+                const teamMembers = document.querySelectorAll('.flex.-space-x-2 img');
+                const randomMember = teamMembers[Math.floor(Math.random() * teamMembers.length)];
+                
+                // Add pulse animation to show activity
+                randomMember.classList.add('animate-pulse');
+                setTimeout(() => {
+                    randomMember.classList.remove('animate-pulse');
+                }, 1000);
+                
+                // Randomly show a notification
+                if (Math.random() > 0.7) {
+                    const notifications = [
+                        "John updated task 'Install steel beams'",
+                        "Sarah uploaded a new document",
+                        "Mike commented on the foundation design",
+                        "New message from the architect"
+                    ];
+                    
+                    const notification = document.createElement('div');
+                    notification.className = 'fixed bottom-20 right-4 bg-white shadow-lg rounded-lg p-3 text-sm max-w-xs animate-fade-in-up';
+                    notification.innerHTML = `
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-bell text-blue-500"></i>
+                            </div>
+                            <div class="ml-2">
+                                <p class="font-medium text-gray-900">${notifications[Math.floor(Math.random() * notifications.length)]}</p>
+                                <p class="text-xs text-gray-500 mt-1">Just now</p>
+                            </div>
+                            <button class="ml-2 text-gray-400 hover:text-gray-500" onclick="this.parentElement.remove()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                    document.body.appendChild(notification);
+                    
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 5000);
+                }
+            }, 5000);
+        });
+    </script>
+<p style="border-radius: 8px; text-align: center; font-size: 12px; color: #fff; margin-top: 16px;position: fixed; left: 8px; bottom: 8px; z-index: 10; background: rgba(0, 0, 0, 0.8); padding: 4px 8px;">Made with <img src="https://enzostvs-deepsite.hf.space/logo.svg" alt="DeepSite Logo" style="width: 16px; height: 16px; vertical-align: middle;display:inline-block;margin-right:3px;filter:brightness(0) invert(1);"><a href="https://enzostvs-deepsite.hf.space" style="color: #fff;text-decoration: underline;" target="_blank" >DeepSite</a> - 🧬 <a href="https://enzostvs-deepsite.hf.space?remix=JarlJarle/constructflow" style="color: #fff;text-decoration: underline;" target="_blank" >Remix</a></p></body>
 </html>
