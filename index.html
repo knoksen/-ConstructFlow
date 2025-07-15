@@ -6,6 +6,8 @@
     <title>ConstructFlow | Construction Project Management</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xeokit/xeokit-sdk/dist/xeokit.css">
+    <script src="https://cdn.jsdelivr.net/npm/@xeokit/xeokit-sdk/dist/xeokit-sdk.min.js"></script>
     <style>
         /* Custom CSS for the 3D viewer and other elements */
         #bim-viewer {
@@ -272,15 +274,7 @@
                             </button>
                         </div>
                     </div>
-                    <div id="bim-viewer">
-                        <!-- Placeholder for 3D viewer - would be replaced with actual viewer like xeokit, Forge, etc. -->
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="text-center">
-                                <i class="fas fa-cube text-6xl text-gray-300 mb-4"></i>
-                                <p class="text-gray-500 font-medium">3D Model Viewer</p>
-                                <p class="text-gray-400 text-sm mt-1">IFC/BIM model would be displayed here</p>
-                            </div>
-                        </div>
+                    <div id="bim-viewer"></div>
                         <div class="viewer-controls">
                             <button class="bg-white p-2 rounded-full shadow-md hover:bg-gray-100">
                                 <i class="fas fa-arrows-alt text-gray-700"></i>
@@ -803,6 +797,27 @@
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('bim-viewer');
+            container.innerHTML = '';
+            const canvas = document.createElement('canvas');
+            canvas.id = 'viewer-canvas';
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+            container.appendChild(canvas);
+
+            const viewer = new xeokit.Viewer({
+                canvasId: 'viewer-canvas'
+            });
+
+            const xktLoader = new xeokit.XKTLoaderPlugin(viewer);
+
+            // Load IFC/BIM models converted to XKT format
+            xktLoader.load({
+                id: 'sample',
+                src: 'models/sample.xkt',
+                edges: true
+            });
         // Repair Management System
         let repairs = [
             {
