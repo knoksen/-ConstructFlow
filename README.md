@@ -44,3 +44,6 @@ ConstructFlow is a demo project showcasing a construction project management das
 
 Because the project consists of static files, it can be deployed on any static hosting platform such as GitHub Pages or Hugging Face Spaces. Copy the repository contents to your host of choice and configure it to serve `index.html` as the entry point.
 
+## Loading IFC/BIM files
+
+The application now uses the [xeokit](https://xeokit.io) viewer. Convert your IFC file to `.xkt` format with the `xeokit-convert` tool and place the result in the `models/` folder. Update the `src` path in `index.html` to load your model.
