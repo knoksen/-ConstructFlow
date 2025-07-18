@@ -1,0 +1,55 @@
+{
+  "name": "constructflow-desktop",
+  "version": "1.0.0",
+  "description": "ConstructFlow - Desktop Construction Project Management Application for Windows 10",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron . --no-sandbox",
+    "dev": "electron . --debug --no-sandbox",
+    "build": "electron-builder",
+    "build-win": "electron-builder --win",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --publish=never"
+  },
+  "author": "ConstructFlow Team",
+  "license": "MIT",
+  "homepage": "./",
+  "devDependencies": {
+    "electron": "^22.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.constructflow.desktop",
+    "productName": "ConstructFlow",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules",
+      "!dist",
+      "!.git",
+      "!.github",
+      "!.vscode",
+      "!*.md",
+      "!Kopi_av_ERNIE_4_5_21B_A3B_PT.ipynb"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

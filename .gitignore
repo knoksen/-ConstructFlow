@@ -1,0 +1,18 @@
+# Add build artifacts to gitignore
+node_modules/
+dist/
+*.log
+.env
+.env.local
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Editor specific
+.vscode/settings.json
+.idea/
+
+# Temporary files
+tmp/
+temp/
